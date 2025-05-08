@@ -14,7 +14,7 @@ See project_setup.md for detailed setup instructions.
 Tech Stack
 Frontend: Streamlit
 Backend: Python (requests, transformers)
-APIs: HaveIBeenPwned, VirusTotal
+APIs:VirusTotal
 AI: TinyLlama (transformers)
 
 Team:

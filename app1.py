@@ -1,8 +1,6 @@
 import streamlit as st
-import pandas as pd
 from link_scanner import scan_url, clear_cache
 from text_analyzer import analyze_text, analyze_email_header
-import os
 
 # Set page configuration
 st.set_page_config(page_title="OSINT Sentinel+", page_icon="🔍", layout="wide")
@@ -48,23 +46,24 @@ st.markdown("""
 
 # Welcome message
 st.markdown('<p class="main-title">OSINT Sentinel+ 🔍</p>', unsafe_allow_html=True)
-st.markdown('<p class="subtitle">A Rapid Scam Detection Tool for URLs, Text, Email Headers, and More</p>', unsafe_allow_html=True)
-st.markdown("Protect yourself from online threats with our URL Scanner, Text Analyzer, Email Header Analyzer, URL Statistics, and Social Media Metadata Extraction!")
+st.markdown('<p class="subtitle">A Rapid Scam Detection Tool for URLs, Text, and Email Headers</p>', unsafe_allow_html=True)
+st.markdown("Protect yourself from online threats with our URL Scanner, Text Analyzer, and Email Header Analyzer!")
 
 # Sidebar for navigation
 with st.sidebar:
     st.markdown("## OSINT Sentinel+")
     st.markdown("Navigate through the app:")
-    page = st.radio("Go to", ["Home", "URL Scanner", "Text Analysis", "Email Header Analysis", "URL Statistics (MATLAB)", "Social Media Metadata (MATLAB)", "How to Use"])
+    page = st.radio("Go to", ["Home", "URL Scanner", "Text Analysis", "Email Header Analysis", "How to Use"])
 
 # Page content based on sidebar selection
 if page == "Home":
-    st.markdown("Welcome to **OSINT Sentinel+**, a tool designed to protect you from online scams by analyzing URLs, text, email headers, and more. Use the sidebar to navigate to our features, including advanced URL Statistics and Social Media Metadata Extraction powered by MATLAB!")
+    st.markdown("Welcome to **OSINT Sentinel+**, a tool designed to protect you from online scams by analyzing URLs, text, and email headers for potential threats. Use the sidebar to navigate to the URL Scanner, Text Analysis, or Email Header Analysis features.")
 
 elif page == "URL Scanner":
     st.markdown('<p class="section-header">URL Scanner</p>', unsafe_allow_html=True)
     st.markdown("Enter a website URL below (not an email address).")
     
+    # Use session state to manage input persistence
     if 'url_input' not in st.session_state:
         st.session_state.url_input = ""
     
@@ -91,21 +90,21 @@ elif page == "URL Scanner":
         st.markdown('<p class="section-header">Scan Results (URL)</p>', unsafe_allow_html=True)
         if not url_input:
             st.markdown("<p style='color:red'>Error: Please enter a URL.</p>", unsafe_allow_html=True)
+        elif "@" in url_input and not (url_input.startswith("http://") or url_input.startswith("https://")):
+            st.markdown("<p style='color:red'>Error: This looks like an email address. Please enter a URL starting with http:// or https://.</p>", unsafe_allow_html=True)
         else:
-            try:
-                with st.spinner("Scanning URL... Please wait."):
-                    result, debug_info = scan_url(url_input)
-                color = "green" if "Safe" in result else "yellow" if "Suspicious" in result or "Analysis not complete" in result else "red"
-                st.markdown(f"<p style='color:{color}'>{result}</p>", unsafe_allow_html=True)
-                with st.expander("Debug Info (URL)"):
-                    st.write(debug_info)
-            except Exception as e:
-                st.markdown(f"<p style='color:red'>Error: Failed to scan URL. {str(e)}</p>", unsafe_allow_html=True)
+            with st.spinner("Scanning URL... Please wait."):
+                result, debug_info = scan_url(url_input)
+            color = "green" if "Safe" in result else "yellow" if "Suspicious" in result or "Analysis not complete" in result else "red"
+            st.markdown(f"<p style='color:{color}'>{result}</p>", unsafe_allow_html=True)
+            with st.expander("Debug Info (URL)"):
+                st.write(debug_info)
 
 elif page == "Text Analysis":
     st.markdown('<p class="section-header">Text Analysis</p>', unsafe_allow_html=True)
     st.markdown("Enter text below to analyze for potential scams or phishing.")
     
+    # Use session state to manage input persistence
     if 'text_input' not in st.session_state:
         st.session_state.text_input = ""
     
@@ -142,6 +141,7 @@ elif page == "Email Header Analysis":
     st.markdown('<p class="section-header">Email Header Analysis</p>', unsafe_allow_html=True)
     st.markdown("Paste an email header below to analyze for potential red flags.")
     
+    # Use session state to manage input persistence
     if 'header_input' not in st.session_state:
         st.session_state.header_input = ""
     
@@ -174,81 +174,15 @@ elif page == "Email Header Analysis":
                 with st.expander("Debug Info (Email Header)"):
                     st.write(f"Exception: {str(e)}")
 
-elif page == "URL Statistics (MATLAB)":
-    st.markdown('<p class="section-header">URL Statistics (Powered by MATLAB)</p>', unsafe_allow_html=True)
-    st.markdown("This section showcases statistical analysis of URL scan results using MATLAB for advanced numerical computing.")
-    
-    try:
-        stats = pd.read_csv("url_stats.csv", header=None).iloc[0]
-        mean_flags, std_flags, max_flags = stats
-        st.write(f"**Average Malicious Flags Across URLs:** {mean_flags:.2f}")
-        st.write(f"**Standard Deviation of Malicious Flags:** {std_flags:.2f}")
-        st.write(f"**Maximum Malicious Flags Detected:** {int(max_flags)}")
-        
-        try:
-            st.image("url_histogram.png", caption="Distribution of Malicious Flags in URL Scans")
-        except FileNotFoundError:
-            st.markdown("<p style='color:orange'>Histogram not available (plotting not supported in this environment).</p>", unsafe_allow_html=True)
-    except FileNotFoundError:
-        st.markdown("<p style='color:red'>Error: URL statistics not found. Please ensure the MATLAB script has been run.</p>", unsafe_allow_html=True)
-        st.markdown("To generate statistics, scan some URLs using the URL Scanner, save the results to `url_data.csv`, and run the `url_stats.m` script in MATLAB.")
-
-elif page == "Social Media Metadata (MATLAB)":
-    st.markdown('<p class="section-header">Social Media Metadata Extraction (Powered by MATLAB)</p>', unsafe_allow_html=True)
-    st.markdown("Extract metadata like geolocation and timestamps from a social media image.")
-
-    # Option to select a pre-loaded image or upload a new one
-    image_option = st.selectbox("Choose an image to analyze:", ["Upload a new image", "Sample Image 1", "Sample Image 2"])
-
-    if image_option == "Upload a new image":
-        uploaded_file = st.file_uploader("Upload a social media image (JPG format)", type=["jpg", "jpeg"])
-        if uploaded_file is not None:
-            # Save the uploaded image
-            with open("uploaded_image.jpg", "wb") as f:
-                f.write(uploaded_file.getbuffer())
-            
-            # Simulate processing (since MATLAB is offline)
-            with st.spinner("Extracting metadata..."):
-                # For the demo, we'll manually swap in the metadata
-                st.session_state.current_image = "uploaded_image.jpg"
-                st.session_state.metadata_file = "metadata.csv"  # Will be uploaded manually
-    else:
-        # Pre-loaded sample images
-        image_name = "image1.jpg" if image_option == "Sample Image 1" else "image2.jpg"
-        metadata_file = "metadata_image1.csv" if image_option == "Sample Image 1" else "metadata_image2.csv"
-        st.session_state.current_image = image_name
-        st.session_state.metadata_file = metadata_file
-
-    # Display the image and metadata if available
-    if "current_image" in st.session_state and os.path.exists(st.session_state.current_image):
-        st.image(st.session_state.current_image, caption="Selected Image", width=300)
-
-        if "metadata_file" in st.session_state and os.path.exists(st.session_state.metadata_file):
-            try:
-                metadata = pd.read_csv(st.session_state.metadata_file, header=None).iloc[0]
-                date_time, device, gps_lat, gps_lon = metadata
-                st.write(f"**Date/Time of Capture:** {date_time}")
-                st.write(f"**Device Used:** {device}")
-                st.write(f"**GPS Latitude:** {gps_lat}")
-                st.write(f"**GPS Longitude:** {gps_lon}")
-                if gps_lat != 'Not available' and gps_lon != 'Not available':
-                    st.markdown(f"[View Location on Google Maps](https://www.google.com/maps?q={gps_lat},{gps_lon})")
-            except Exception as e:
-                st.markdown(f"<p style='color:red'>Error: Failed to read metadata. Please try again.</p>", unsafe_allow_html=True)
-        else:
-            st.markdown("<p style='color:orange'>Metadata extraction in progress... Please wait.</p>", unsafe_allow_html=True)
-            # For the demo, you'll manually upload metadata.csv if a new image is uploaded
-
 else:  # How to Use
     st.markdown('<p class="section-header">How to Use</p>', unsafe_allow_html=True)
     st.markdown("""
-    1. **URL Scanner**: Navigate to the URL Scanner page. Enter a URL (e.g., https://example.com) and click "Scan URL" to check for malicious activity.
-    2. **Text Analysis**: Navigate to the Text Analysis page. Enter a suspicious message or email and click "Analyze Text" to check for scams.
-    3. **Email Header Analysis**: Navigate to the Email Header Analysis page. Paste an email header and click "Analyze Header" to check for red flags.
-    4. **URL Statistics (MATLAB)**: View statistical analysis of URL scan results, powered by MATLAB.
-    5. **Social Media Metadata (MATLAB)**: Select or upload a social media image to extract metadata like geolocation and timestamps.
-    6. Results will display in green (safe), yellow (suspicious or pending), or red (error).
-    7. Use the "Clear" button to reset inputs.
+    1. **URL Scanner**: Navigate to the URL Scanner page. Enter a URL (e.g., https://example.com) and click "Scan URL" to check for malicious activity. Use "Refresh Cache" to clear cached results. *Note*: Uses VirusTotal API (free tier, 4 requests/minute limit).
+    2. **Text Analysis**: Navigate to the Text Analysis page. Enter a suspicious message or email and click "Analyze Text" to check for potential scams or phishing using rule-based and AI-based methods.
+    3. **Email Header Analysis**: Navigate to the Email Header Analysis page. Paste an email header and click "Analyze Header" to check for red flags like suspicious sender domains or failed authentication.
+    4. Results will display in green (safe), yellow (suspicious or pending), or red (error).
+    5. Check 'Debug Info' for more details if needed.
+    6. Use the "Clear" button to reset inputs.
     """)
 
 # Footer
